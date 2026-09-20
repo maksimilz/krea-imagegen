@@ -1,0 +1,11 @@
+{
+  "display_name": "Krea ImageGen (ComfyUI)",
+  "loading_order": 100,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Antigravity & User",
+  "version": "1.0.0",
+  "homePage": ""
+}

@@ -1,0 +1,230 @@
+<div class="krea-ig-container">
+    <!-- Header -->
+    <div class="krea-ig-header">
+        <div class="krea-ig-header-left">
+            <div class="krea-ig-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <div>
+                <h3>Krea ImageGen (ComfyUI)</h3>
+                <p>1-Pass In-Context scene rendering with Krea-2 MMDiT architecture.</p>
+            </div>
+        </div>
+        <div id="krea_status_badge" class="krea-ig-badge">
+            <i class="fa-solid fa-circle-check"></i> Ready
+        </div>
+    </div>
+
+    <!-- Master Switch -->
+    <div class="krea-ig-card">
+        <div class="krea-ig-card-info">
+            <div class="krea-ig-card-title"><i class="fa-solid fa-power-off" style="color:#06b6d4;"></i> Enable Krea ImageGen</div>
+            <div class="krea-ig-card-desc">Inject Krea-2 directives into character prompts and automatically render scenes in ComfyUI.</div>
+        </div>
+        <input type="checkbox" id="krea_enabled" />
+    </div>
+
+    <!-- ComfyUI Connection & Workflow -->
+    <div class="krea-ig-panel">
+        <div class="krea-ig-panel-title"><i class="fa-solid fa-network-wired"></i> ComfyUI Server & Workflow</div>
+        <div class="krea-ig-row" style="margin-bottom:10px;">
+            <input type="text" id="krea_url" class="text_pole" placeholder="http://127.0.0.1:8188" style="flex:1;" />
+            <button id="krea_test_btn" class="menu_button"><i class="fa-solid fa-wifi"></i> Test Connection</button>
+        </div>
+        <div class="krea-ig-row">
+            <div style="flex:1;">
+                <label>Workflow JSON</label>
+                <select id="krea_workflow" class="text_pole" style="width:100%; cursor:pointer;">
+                    <option value="">Loading workflows...</option>
+                </select>
+            </div>
+            <button id="krea_refresh_wf" class="menu_button" title="Refresh Workflows" style="margin-top:20px;"><i class="fa-solid fa-arrows-rotate"></i></button>
+        </div>
+    </div>
+
+    <!-- 1-Pass Generation & Trigger Rules -->
+    <div class="krea-ig-panel">
+        <div class="krea-ig-panel-title"><i class="fa-solid fa-bolt" style="color:#f59e0b;"></i> 1-Pass Generation & Triggers</div>
+        <div class="krea-ig-grid-2" style="margin-bottom:12px;">
+            <div>
+                <label>Krea-2 Prompt Style</label>
+                <select id="krea_template" class="text_pole" style="width:100%;">
+                    <option value="krea_cinematic">Krea 2 + Cinematic (Composition & Light)</option>
+                    <option value="krea_pov">Krea 2 + POV (1st Person / Hand Anchors)</option>
+                    <option value="krea_portrait">Krea 2 + Portrait (Close-up & Bokeh)</option>
+                </select>
+            </div>
+            <div>
+                <label>Trigger Mode</label>
+                <select id="krea_trigger_mode" class="text_pole" style="width:100%;">
+                    <option value="always">Always (Every Assistant Reply)</option>
+                    <option value="frequency">Frequency (After X Replies)</option>
+                    <option value="conditional">Conditional (When character shares/takes photo)</option>
+                    <option value="manual">Manual Button Only (No auto-injection)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="krea-ig-grid-3" style="margin-bottom:12px;">
+            <div id="krea_freq_wrapper" style="display:none;">
+                <label>Frequency (Every X Replies)</label>
+                <input type="number" id="krea_auto_freq" class="text_pole" min="1" max="50" style="width:100%;" />
+            </div>
+            <div>
+                <label>Max Images / Reply</label>
+                <select id="krea_image_count" class="text_pole" style="width:100%;">
+                    <option value="1">1 Image</option>
+                    <option value="2">2 Images</option>
+                    <option value="3">3 Images</option>
+                    <option value="4">4 Images</option>
+                </select>
+            </div>
+            <div>
+                <label>Display Mode</label>
+                <select id="krea_inject_mode" class="text_pole" style="width:100%;">
+                    <option value="inline">Inline (Inside Message Body)</option>
+                    <option value="gallery">Gallery (Attached Media)</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-bottom:10px;">
+            <label>Extra Visual Directives (injected to Krea-2)</label>
+            <input type="text" id="krea_extra" class="text_pole" placeholder="e.g. 35mm film still, warm volumetric lighting, shallow depth of field..." style="width:100%;" />
+        </div>
+
+        <div class="krea-ig-card" style="padding:10px 14px; margin-bottom:8px;">
+            <div class="krea-ig-card-info">
+                <div class="krea-ig-card-title" style="font-size:0.85rem;">Preview Prompt Before Rendering</div>
+                <div class="krea-ig-card-desc">Show a popup to inspect or edit the AI's Krea-2 prompt before sending to ComfyUI.</div>
+            </div>
+            <input type="checkbox" id="krea_preview" />
+        </div>
+    </div>
+
+    <!-- ComfyUI Sampler & Resolution Settings -->
+    <div class="krea-ig-panel">
+        <div class="krea-ig-panel-title"><i class="fa-solid fa-sliders"></i> Sampling & Model Settings</div>
+        <div class="krea-ig-grid-2" style="margin-bottom:12px;">
+            <div>
+                <label>Checkpoint Model (%model%)</label>
+                <select id="krea_model" class="text_pole" style="width:100%;"><option value="">Default from workflow</option></select>
+            </div>
+            <div>
+                <label>Sampler (%sampler%)</label>
+                <select id="krea_sampler" class="text_pole" style="width:100%;"><option value="euler">euler</option></select>
+            </div>
+        </div>
+
+        <div class="krea-ig-grid-4" style="margin-bottom:12px;">
+            <div>
+                <label>Steps (%steps%)</label>
+                <input type="number" id="krea_steps" class="text_pole" min="1" max="150" style="width:100%;" />
+            </div>
+            <div>
+                <label>CFG Scale (%scale%)</label>
+                <input type="number" id="krea_cfg" class="text_pole" min="0.5" max="30" step="0.5" style="width:100%;" />
+            </div>
+            <div>
+                <label>Denoise (%denoise%)</label>
+                <input type="number" id="krea_denoise" class="text_pole" min="0.05" max="1.0" step="0.05" style="width:100%;" />
+            </div>
+            <div>
+                <label>Seed (-1 = Random)</label>
+                <div style="display:flex; gap:4px;">
+                    <input type="number" id="krea_seed" class="text_pole" style="flex:1;" />
+                    <button id="krea_seed_dice" class="menu_button" title="Randomize"><i class="fa-solid fa-dice"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="krea-ig-grid-2" style="margin-bottom:12px;">
+            <div>
+                <label>Resolution Mode</label>
+                <select id="krea_res_preset" class="text_pole" style="width:100%;"></select>
+            </div>
+            <div>
+                <label>Custom Dimensions (W x H)</label>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <input type="number" id="krea_w" class="text_pole" placeholder="W" style="flex:1; text-align:center;" />
+                    <span>×</span>
+                    <input type="number" id="krea_h" class="text_pole" placeholder="H" style="flex:1; text-align:center;" />
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom:10px;">
+            <label>Positive Prefix (prepended to every prompt)</label>
+            <input type="text" id="krea_prefix" class="text_pole" placeholder="e.g. cinematic film still, masterpiece, high fidelity..." style="width:100%;" />
+        </div>
+
+        <div style="margin-bottom:10px;">
+            <label>Negative Prompt (%negative_prompt%)</label>
+            <input type="text" id="krea_negative" class="text_pole" style="width:100%;" />
+        </div>
+
+        <div class="krea-ig-card" style="padding:10px 14px;">
+            <div class="krea-ig-card-info">
+                <div class="krea-ig-card-title" style="font-size:0.85rem;">Compress to Web-Friendly JPEG</div>
+                <div class="krea-ig-card-desc">Saves disk space and speeds up chat rendering.</div>
+            </div>
+            <input type="checkbox" id="krea_compress" />
+        </div>
+    </div>
+
+    <!-- LoRA Lab with Auto-Memory Triggers -->
+    <div class="krea-ig-panel">
+        <div class="krea-ig-panel-title"><i class="fa-solid fa-flask" style="color:#a855f7;"></i> LoRA Lab (Auto-Trigger Memory)</div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px;">
+            Trigger words entered here are automatically saved per LoRA file and injected whenever that LoRA is active.
+        </p>
+
+        <div class="krea-ig-grid-2">
+            <!-- LoRA Slot 1 -->
+            <div class="krea-lora-box">
+                <div class="krea-lora-header">Slot 1 (%lora1%)</div>
+                <select id="krea_lora_1" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_1" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
+                    <input type="range" id="krea_lorawt_1" min="-2" max="2" step="0.1" style="flex:1;" />
+                    <span id="krea_lorawt_lbl_1" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
+                </div>
+            </div>
+
+            <!-- LoRA Slot 2 -->
+            <div class="krea-lora-box">
+                <div class="krea-lora-header">Slot 2 (%lora2%)</div>
+                <select id="krea_lora_2" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_2" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
+                    <input type="range" id="krea_lorawt_2" min="-2" max="2" step="0.1" style="flex:1;" />
+                    <span id="krea_lorawt_lbl_2" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
+                </div>
+            </div>
+
+            <!-- LoRA Slot 3 -->
+            <div class="krea-lora-box">
+                <div class="krea-lora-header">Slot 3 (%lora3%)</div>
+                <select id="krea_lora_3" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_3" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
+                    <input type="range" id="krea_lorawt_3" min="-2" max="2" step="0.1" style="flex:1;" />
+                    <span id="krea_lorawt_lbl_3" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
+                </div>
+            </div>
+
+            <!-- LoRA Slot 4 -->
+            <div class="krea-lora-box">
+                <div class="krea-lora-header">Slot 4 (%lora4%)</div>
+                <select id="krea_lora_4" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_4" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
+                    <input type="range" id="krea_lorawt_4" min="-2" max="2" step="0.1" style="flex:1;" />
+                    <span id="krea_lorawt_lbl_4" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
