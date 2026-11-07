@@ -51,23 +51,23 @@ export function openKreaLightbox({
         <div class="krea-lb-header">
             <div class="krea-lb-left">
                 ${imageList.length > 1 ? `<div class="krea-lb-counter"><i class="fa-solid fa-images"></i> <span id="krea_lb_counter_txt">${currentIdx + 1} / ${imageList.length}</span></div>` : ""}
-                ${title ? `<button type="button" class="krea-lb-btn krea-lb-prompt-toggle" title="Toggle Prompt"><i class="fa-solid fa-align-left"></i> <span>Prompt</span></button>` : ""}
+                ${title ? `<button type="button" class="krea-lb-btn krea-lb-prompt-toggle" title="Показать/скрыть промт"><i class="fa-solid fa-align-left"></i> <span>Промт</span></button>` : ""}
             </div>
             <div class="krea-lb-actions">
-                <button type="button" class="krea-lb-btn" id="krea_lb_zoom_in" title="Zoom In (+)"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
-                <button type="button" class="krea-lb-btn" id="krea_lb_zoom_out" title="Zoom Out (-)"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
-                <button type="button" class="krea-lb-btn" id="krea_lb_zoom_reset" title="Fit (0)"><i class="fa-solid fa-compress"></i> <span>Fit</span></button>
-                <button type="button" class="krea-lb-btn" id="krea_lb_download" title="Download Image"><i class="fa-solid fa-download"></i></button>
-                <button type="button" class="krea-lb-btn krea-lb-close" id="krea_lb_close" title="Close (Esc)"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" class="krea-lb-btn" id="krea_lb_zoom_in" title="Приблизить (+)"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                <button type="button" class="krea-lb-btn" id="krea_lb_zoom_out" title="Отдалить (-)"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button type="button" class="krea-lb-btn" id="krea_lb_zoom_reset" title="Вписать (0)"><i class="fa-solid fa-compress"></i> <span>Вписать</span></button>
+                <button type="button" class="krea-lb-btn" id="krea_lb_download" title="Скачать картинку"><i class="fa-solid fa-download"></i></button>
+                <button type="button" class="krea-lb-btn krea-lb-close" id="krea_lb_close" title="Закрыть (Esc)"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
 
         <div class="krea-lb-viewport">
-            ${imageList.length > 1 ? `<button type="button" class="krea-lb-nav-btn krea-lb-prev" title="Previous Variant (Left Arrow)"><i class="fa-solid fa-chevron-left"></i></button>` : ""}
+            ${imageList.length > 1 ? `<button type="button" class="krea-lb-nav-btn krea-lb-prev" title="Предыдущий вариант (←)"><i class="fa-solid fa-chevron-left"></i></button>` : ""}
             <div class="krea-lb-stage">
                 <img class="krea-lb-image" id="krea_lb_img" src="${escapeHtml(getCurrSrc())}" alt="Krea Full Image" draggable="false" />
             </div>
-            ${imageList.length > 1 ? `<button type="button" class="krea-lb-nav-btn krea-lb-next" title="Next Variant (Right Arrow)"><i class="fa-solid fa-chevron-right"></i></button>` : ""}
+            ${imageList.length > 1 ? `<button type="button" class="krea-lb-nav-btn krea-lb-next" title="Следующий вариант (→)"><i class="fa-solid fa-chevron-right"></i></button>` : ""}
         </div>
 
         ${title ? `
@@ -168,7 +168,7 @@ export function openKreaLightbox({
     overlay.querySelector("#krea_lb_copy_prompt")?.addEventListener("click", () => {
         navigator.clipboard.writeText(title || "").then(() => {
             if (typeof toastr !== "undefined" && toastr.success) {
-                toastr.success("Prompt copied to clipboard!");
+                toastr.success("Промт скопирован!");
             }
         });
     });
@@ -176,7 +176,8 @@ export function openKreaLightbox({
     overlay.querySelector("#krea_lb_download")?.addEventListener("click", () => {
         const link = document.createElement("a");
         link.href = getCurrSrc();
-        link.download = `krea_${Date.now()}.png`;
+        // Saved files are .jpeg when compression is on — keep the real name and extension.
+        link.download = getCurrSrc().split("/").pop() || `krea_${Date.now()}.png`;
         link.click();
     });
 
@@ -275,16 +276,25 @@ export function openKreaLightbox({
         }
     });
 
-    // Keyboard navigation
-    const keyHandler = (e) => {
-        if (e.key === "Escape") closeKreaLightbox();
-        else if (e.key === "ArrowLeft") setVariant(currentIdx - 1);
-        else if (e.key === "ArrowRight") setVariant(currentIdx + 1);
-        else if (e.key === "0") resetZoom(true);
-        else if (e.key === "+" || e.key === "=") setZoom(zoom * 1.35);
-        else if (e.key === "-") setZoom(zoom / 1.35);
+    // Keyboard navigation. Capture phase + stop: otherwise ST's own ←/→ handler swipes the chat
+    // (→ on the last swipe even starts a new LLM generation).
+    const keyActions = {
+        Escape: () => closeKreaLightbox(),
+        ArrowLeft: () => setVariant(currentIdx - 1),
+        ArrowRight: () => setVariant(currentIdx + 1),
+        "0": () => resetZoom(true),
+        "+": () => setZoom(zoom * 1.35),
+        "=": () => setZoom(zoom * 1.35),
+        "-": () => setZoom(zoom / 1.35),
     };
-    window.addEventListener("keydown", keyHandler);
+    const keyHandler = (e) => {
+        const action = keyActions[e.key];
+        if (!action) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        action();
+    };
+    window.addEventListener("keydown", keyHandler, true);
 
     // Fade in
     requestAnimationFrame(() => {
@@ -295,7 +305,7 @@ export function openKreaLightbox({
         close() {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
-            window.removeEventListener("keydown", keyHandler);
+            window.removeEventListener("keydown", keyHandler, true);
             overlay.classList.remove("krea-lb-open");
             setTimeout(() => { overlay.remove(); }, 250);
             activeLightbox = null;

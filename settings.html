@@ -1,230 +1,316 @@
 <div class="krea-ig-container">
-    <!-- Header -->
+
+    <!-- Header: title, status, master switch -->
     <div class="krea-ig-header">
-        <div class="krea-ig-header-left">
-            <div class="krea-ig-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-            <div>
-                <h3>Krea ImageGen (ComfyUI)</h3>
-                <p>1-Pass In-Context scene rendering with Krea-2 MMDiT architecture.</p>
-            </div>
+        <div class="krea-ig-title">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Krea ImageGen</span>
+            <span id="krea_status_badge" class="krea-ig-badge"><i class="fa-solid fa-circle-check"></i> Готово</span>
         </div>
-        <div id="krea_status_badge" class="krea-ig-badge">
-            <i class="fa-solid fa-circle-check"></i> Ready
-        </div>
+        <label class="krea-switch" title="Добавлять директивы Krea-2 в промт и рендерить сцены в ComfyUI">
+            <span>Включено</span>
+            <input type="checkbox" id="krea_enabled" />
+        </label>
     </div>
 
-    <!-- Master Switch -->
-    <div class="krea-ig-card">
-        <div class="krea-ig-card-info">
-            <div class="krea-ig-card-title"><i class="fa-solid fa-power-off" style="color:#06b6d4;"></i> Enable Krea ImageGen</div>
-            <div class="krea-ig-card-desc">Inject Krea-2 directives into character prompts and automatically render scenes in ComfyUI.</div>
+    <!-- Connection -->
+    <details class="krea-sec" open>
+        <summary><i class="fa-solid fa-network-wired"></i> Сервер и workflow</summary>
+        <div class="krea-sec-body">
+            <div class="krea-row">
+                <input type="text" id="krea_url" class="text_pole krea-grow" placeholder="http://127.0.0.1:8188" />
+                <button id="krea_test_btn" class="menu_button krea-btn" title="Проверить подключение и загрузить модели / сэмплеры / LoRA"><i class="fa-solid fa-wifi"></i> Проверить</button>
+                <button id="krea_interrupt_btn" class="menu_button krea-btn krea-btn-danger" title="Прервать ComfyUI и очистить его очередь"><i class="fa-solid fa-hand"></i> Стоп</button>
+            </div>
+            <div class="krea-field">
+                <label>Workflow</label>
+                <div class="krea-row">
+                    <select id="krea_workflow" class="text_pole krea-grow"><option value="">Загрузка workflow…</option></select>
+                    <button id="krea_refresh_wf" class="menu_button krea-btn" title="Обновить список"><i class="fa-solid fa-arrows-rotate"></i></button>
+                </div>
+                <div id="krea_wf_info" class="krea-wf-info"></div>
+            </div>
         </div>
-        <input type="checkbox" id="krea_enabled" />
-    </div>
+    </details>
 
-    <!-- ComfyUI Connection & Workflow -->
-    <div class="krea-ig-panel">
-        <div class="krea-ig-panel-title"><i class="fa-solid fa-network-wired"></i> ComfyUI Server & Workflow</div>
-        <div class="krea-ig-row" style="margin-bottom:10px;">
-            <input type="text" id="krea_url" class="text_pole" placeholder="http://127.0.0.1:8188" style="flex:1;" />
-            <button id="krea_test_btn" class="menu_button"><i class="fa-solid fa-wifi"></i> Test Connection</button>
-        </div>
-        <div class="krea-ig-row">
-            <div style="flex:1;">
-                <label>Workflow JSON</label>
-                <select id="krea_workflow" class="text_pole" style="width:100%; cursor:pointer;">
-                    <option value="">Loading workflows...</option>
+    <!-- Generation -->
+    <details class="krea-sec" open>
+        <summary><i class="fa-solid fa-bolt"></i> Генерация</summary>
+        <div class="krea-sec-body">
+            <div class="krea-grid krea-grid-2">
+                <div class="krea-field">
+                    <label>Тип промта</label>
+                    <select id="krea_template" class="text_pole">
+                        <option value="krea_cinematic">Кино (композиция и свет)</option>
+                        <option value="krea_pov">POV (от первого лица / руки)</option>
+                        <option value="krea_portrait">Портрет (крупный план и боке)</option>
+                        <option value="anima_hybrid">Anima (теги + текст, канон-персонажи)</option>
+                        <option value="moss_hybrid">MOSS (теги + текст, надписи)</option>
+                    </select>
+                </div>
+                <div class="krea-field">
+                    <label>Когда рисовать</label>
+                    <select id="krea_trigger_mode" class="text_pole">
+                        <option value="always">Каждый ответ</option>
+                        <option value="frequency">Каждые N ответов</option>
+                        <option value="conditional">Когда персонаж делится фото</option>
+                        <option value="manual">Только по кнопке</option>
+                    </select>
+                </div>
+                <div class="krea-field" id="krea_freq_wrapper" style="display:none;">
+                    <label>Каждые N ответов</label>
+                    <input type="number" id="krea_auto_freq" class="text_pole" min="1" max="50" />
+                </div>
+                <div class="krea-field">
+                    <label>Картинок за ответ</label>
+                    <select id="krea_image_count" class="text_pole">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="auto">Сама (1–4)</option>
+                    </select>
+                </div>
+                <div class="krea-field">
+                    <label title="Если рендер оборвался (ошибка ComfyUI, нехватка видеопамяти, перезапуск сервера, таймаут, обрыв сети) — картинка перезапускается сама. Стоп и «Пропустить» повтор не запускают.">Автоповтор при сбое</label>
+                    <select id="krea_auto_retries" class="text_pole">
+                        <option value="0">Выкл</option>
+                        <option value="1">1 раз</option>
+                        <option value="2">2 раза</option>
+                        <option value="3">3 раза</option>
+                        <option value="5">5 раз</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="krea-field">
+                <label>Доп. визуальные указания</label>
+                <input type="text" id="krea_extra" class="text_pole" placeholder="например: 35mm film still, тёплый объёмный свет…" />
+            </div>
+
+            <div class="krea-field">
+                <label title="Последние промты передаются модели внутри инструкции (история чата остаётся без картинок, поэтому кэш промта не сбрасывается) — модель держит внешность персонажей и формат тегов. Каждый ≈150–250 токенов.">Помнить прошлых промтов</label>
+                <select id="krea_history_prompts" class="text_pole">
+                    <option value="0">0 — не показывать модели</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
                 </select>
             </div>
-            <button id="krea_refresh_wf" class="menu_button" title="Refresh Workflows" style="margin-top:20px;"><i class="fa-solid fa-arrows-rotate"></i></button>
-        </div>
-    </div>
 
-    <!-- 1-Pass Generation & Trigger Rules -->
-    <div class="krea-ig-panel">
-        <div class="krea-ig-panel-title"><i class="fa-solid fa-bolt" style="color:#f59e0b;"></i> 1-Pass Generation & Triggers</div>
-        <div class="krea-ig-grid-2" style="margin-bottom:12px;">
-            <div>
-                <label>Krea-2 Prompt Style</label>
-                <select id="krea_template" class="text_pole" style="width:100%;">
-                    <option value="krea_cinematic">Krea 2 + Cinematic (Composition & Light)</option>
-                    <option value="krea_pov">Krea 2 + POV (1st Person / Hand Anchors)</option>
-                    <option value="krea_portrait">Krea 2 + Portrait (Close-up & Bokeh)</option>
+            <label class="krea-check">
+                <input type="checkbox" id="krea_preview" />
+                <span>Показывать и править промт перед рендером</span>
+            </label>
+
+            <label class="krea-check">
+                <input type="checkbox" id="krea_soft_tone" />
+                <span>Мягкие формулировки <small>откровенные сцены описываются сдержанно, без анатомии — включай, только если API блокирует ответы с картинками</small></span>
+            </label>
+
+            <label class="krea-check">
+                <input type="checkbox" id="krea_special_enabled" />
+                <span>Особая картинка <small id="krea_special_desc">Последняя картинка — отдельная сцена по заданию.</small></span>
+            </label>
+            <div id="krea_special_wrapper" style="display:none;">
+                <textarea id="krea_special_prompt" class="text_pole krea-textarea" placeholder="например: селфи с телефона от первого лица, крупный план, рукописное письмо…"></textarea>
+            </div>
+        </div>
+    </details>
+
+    <!-- Clio style -->
+    <details class="krea-sec" open>
+        <summary><i class="fa-solid fa-palette"></i> Стиль <span id="krea_clio_style_badge" class="krea-clio-badge">Выкл</span></summary>
+        <div class="krea-sec-body">
+            <div id="krea_clio_card" class="krea-clio-card" title="Открыть галерею стилей">
+                <div class="krea-clio-card-thumb">
+                    <img id="krea_clio_card_img" src="" alt="" style="display:none;" />
+                    <div id="krea_clio_card_img_none" class="krea-clio-none-ph"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                </div>
+                <div class="krea-clio-card-body">
+                    <div class="krea-clio-card-name" id="krea_clio_card_name">Без стиля</div>
+                    <div class="krea-clio-card-desc" id="krea_clio_card_desc">Clio + Style Atlas…</div>
+                </div>
+                <button id="krea_clio_pick_btn" class="menu_button krea-clio-browse-btn" type="button"><i class="fa-solid fa-images"></i> Галерея</button>
+            </div>
+            <div class="krea-row krea-clio-quick">
+                <button id="krea_clio_prev" class="menu_button krea-btn" title="Предыдущий стиль"><i class="fa-solid fa-chevron-left"></i></button>
+                <button id="krea_clio_next" class="menu_button krea-btn" title="Следующий стиль"><i class="fa-solid fa-chevron-right"></i></button>
+                <button id="krea_clio_random_btn" class="menu_button krea-btn" title="Случайный стиль"><i class="fa-solid fa-dice"></i> Случайный</button>
+                <button id="krea_clio_fav_btn" class="menu_button krea-btn" title="Текущий стиль в избранное"><i class="fa-regular fa-star"></i></button>
+                <button id="krea_clio_none_btn" class="menu_button krea-btn" title="Без стиля"><i class="fa-solid fa-ban"></i> Без стиля</button>
+                <button id="krea_style_ai_btn" class="menu_button krea-btn" title="ИИ посмотрит карточку и историю чата и предложит 6 стилей под твои пожелания"><i class="fa-solid fa-robot"></i> Подобрать под чат</button>
+            </div>
+            <label class="krea-check">
+                <input type="checkbox" id="krea_per_chat_style" />
+                <span>Свой стиль для каждого чата <small>стиль и модификаторы запоминаются в чате и возвращаются, когда ты в него заходишь <b id="krea_chat_style_note" style="display:none;">· сейчас стиль этого чата</b></small></span>
+            </label>
+            <div id="krea_atlas_status" class="krea-atlas-status"></div>
+            <div id="krea_atlas_block" style="display:none;">
+                <div class="krea-field">
+                    <label title="Добавляются к промту после стиля (и к стилям Clio тоже). 🎲 — новый случайный для каждой картинки.">Модификаторы Style Atlas</label>
+                    <div id="krea_style_mods" class="krea-grid krea-grid-2"></div>
+                </div>
+                <div class="krea-field">
+                    <label>Текст стилей Atlas</label>
+                    <select id="krea_atlas_version" class="text_pole">
+                        <option value="short">Короткий (как на превью)</option>
+                        <option value="long">Полный</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <!-- Sampling -->
+    <details class="krea-sec">
+        <summary><i class="fa-solid fa-sliders"></i> Сэмплинг и разрешение</summary>
+        <div class="krea-sec-body">
+            <div class="krea-grid krea-grid-2">
+                <div class="krea-field">
+                    <label>Модель <code>%model%</code></label>
+                    <select id="krea_model" class="text_pole"><option value="">Из workflow</option></select>
+                </div>
+                <div class="krea-field">
+                    <label>Сэмплер <code>%sampler%</code></label>
+                    <select id="krea_sampler" class="text_pole"><option value="euler">euler</option></select>
+                </div>
+            </div>
+            <div class="krea-grid krea-grid-4">
+                <div class="krea-field">
+                    <label>Шаги</label>
+                    <input type="number" id="krea_steps" class="text_pole" min="1" max="150" />
+                </div>
+                <div class="krea-field">
+                    <label>CFG</label>
+                    <input type="number" id="krea_cfg" class="text_pole" min="0.5" max="30" step="0.5" />
+                </div>
+                <div class="krea-field">
+                    <label>Denoise</label>
+                    <input type="number" id="krea_denoise" class="text_pole" min="0.05" max="1.0" step="0.05" />
+                </div>
+                <div class="krea-field">
+                    <label>Сид (-1 = случайный)</label>
+                    <div class="krea-row">
+                        <input type="number" id="krea_seed" class="text_pole krea-grow" />
+                        <button id="krea_seed_dice" class="menu_button krea-btn" title="Случайный сид"><i class="fa-solid fa-dice"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="krea-grid krea-grid-2">
+                <div class="krea-field">
+                    <label>Разрешение</label>
+                    <select id="krea_res_preset" class="text_pole"></select>
+                </div>
+                <div class="krea-field">
+                    <label>Свои Ш &times; В</label>
+                    <div class="krea-row">
+                        <input type="number" id="krea_w" class="text_pole krea-grow" placeholder="Ш" />
+                        <span>&times;</span>
+                        <input type="number" id="krea_h" class="text_pole krea-grow" placeholder="В" />
+                    </div>
+                </div>
+            </div>
+            <div class="krea-field">
+                <label>Префикс промта</label>
+                <input type="text" id="krea_prefix" class="text_pole" placeholder="добавляется в начало каждого промта" />
+            </div>
+            <div class="krea-field">
+                <label>Негативный промт <code>%negative_prompt%</code></label>
+                <input type="text" id="krea_negative" class="text_pole" />
+            </div>
+            <label class="krea-check">
+                <input type="checkbox" id="krea_hires" />
+                <span>Повышенное разрешение <small>~1.5 Мп вместо ~1 Мп, те же пропорции: волосы, кожа и ткань заметно детальнее, рендер на ~30% дольше</small></span>
+            </label>
+            <label class="krea-check">
+                <input type="checkbox" id="krea_compress" />
+                <span>Сохранять как JPEG <small>файлы меньше, чат быстрее</small></span>
+            </label>
+        </div>
+    </details>
+
+    <!-- LoRA -->
+    <details class="krea-sec">
+        <summary><i class="fa-solid fa-flask"></i> LoRA <small>триггер-слова запоминаются для каждого файла</small></summary>
+        <div class="krea-sec-body">
+            <div class="krea-lora">
+                <div class="krea-lora-title">Слот 1 <code>%lora1%</code></div>
+                <select id="krea_lora_1" class="text_pole"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_1" class="text_pole" placeholder="Триггер-слова…" />
+                <div class="krea-row krea-weight">
+                    <span>Вес</span>
+                    <input type="range" id="krea_lorawt_1" class="krea-grow" min="-2" max="2" step="0.1" />
+                    <span id="krea_lorawt_lbl_1">1.0</span>
+                </div>
+            </div>
+            <div class="krea-lora">
+                <div class="krea-lora-title">Слот 2 <code>%lora2%</code></div>
+                <select id="krea_lora_2" class="text_pole"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_2" class="text_pole" placeholder="Триггер-слова…" />
+                <div class="krea-row krea-weight">
+                    <span>Вес</span>
+                    <input type="range" id="krea_lorawt_2" class="krea-grow" min="-2" max="2" step="0.1" />
+                    <span id="krea_lorawt_lbl_2">1.0</span>
+                </div>
+            </div>
+            <div class="krea-lora">
+                <div class="krea-lora-title">Слот 3 <code>%lora3%</code></div>
+                <select id="krea_lora_3" class="text_pole"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_3" class="text_pole" placeholder="Триггер-слова…" />
+                <div class="krea-row krea-weight">
+                    <span>Вес</span>
+                    <input type="range" id="krea_lorawt_3" class="krea-grow" min="-2" max="2" step="0.1" />
+                    <span id="krea_lorawt_lbl_3">1.0</span>
+                </div>
+            </div>
+            <div class="krea-lora">
+                <div class="krea-lora-title">Слот 4 <code>%lora4%</code></div>
+                <select id="krea_lora_4" class="text_pole"><option value="">None</option></select>
+                <input type="text" id="krea_lora_trig_4" class="text_pole" placeholder="Триггер-слова…" />
+                <div class="krea-row krea-weight">
+                    <span>Вес</span>
+                    <input type="range" id="krea_lorawt_4" class="krea-grow" min="-2" max="2" step="0.1" />
+                    <span id="krea_lorawt_lbl_4">1.0</span>
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <!-- Style picker modal -->
+    <div id="krea_clio_modal" class="krea-clio-modal" style="display:none;">
+        <div class="krea-clio-dialog">
+            <div class="krea-clio-dialog-header">
+                <div class="krea-clio-dialog-title">
+                    <i class="fa-solid fa-palette"></i>
+                    <span id="krea_clio_modal_title">Выбор стиля</span>
+                    <span class="krea-clio-count" id="krea_clio_count_label"></span>
+                </div>
+                <div class="krea-clio-search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="krea_clio_search" placeholder="Поиск (anime, watercolor, 3d, photo…)" autocomplete="off" />
+                </div>
+                <button type="button" id="krea_clio_modal_close" class="krea-clio-close-btn" title="Закрыть (Esc)">&times;</button>
+            </div>
+            <div class="krea-clio-toolbar">
+                <select id="krea_style_source_select" class="text_pole" title="Откуда стили">
+                    <option value="">Все источники</option>
+                    <option value="clio">Clio (под Krea 2)</option>
+                    <option value="atlas">Style Atlas</option>
                 </select>
-            </div>
-            <div>
-                <label>Trigger Mode</label>
-                <select id="krea_trigger_mode" class="text_pole" style="width:100%;">
-                    <option value="always">Always (Every Assistant Reply)</option>
-                    <option value="frequency">Frequency (After X Replies)</option>
-                    <option value="conditional">Conditional (When character shares/takes photo)</option>
-                    <option value="manual">Manual Button Only (No auto-injection)</option>
+                <select id="krea_clio_tradition_select" class="text_pole">
+                    <option value="">Все категории</option>
                 </select>
+                <label class="krea-check krea-pic-only"><input type="checkbox" id="krea_style_pic_only" /> <span>Только с картинкой</span></label>
+                <button type="button" id="krea_clio_filter_fav" class="menu_button krea-btn" title="Только избранные"><i class="fa-solid fa-star"></i> Избранное</button>
+                <button type="button" id="krea_clio_filter_recent" class="menu_button krea-btn" title="Недавно использованные"><i class="fa-solid fa-clock-rotate-left"></i> Недавние</button>
+                <span class="krea-grow"></span>
+                <button type="button" id="krea_clio_modal_ai_btn" class="menu_button krea-btn" title="ИИ предложит стили под этот чат"><i class="fa-solid fa-robot"></i> Подобрать под чат</button>
+                <button type="button" id="krea_clio_modal_random_btn" class="menu_button krea-btn" title="Случайный из текущего фильтра"><i class="fa-solid fa-dice"></i> Случайный</button>
+                <button type="button" id="krea_clio_modal_none_btn" class="menu_button krea-btn"><i class="fa-solid fa-ban"></i> Без стиля</button>
             </div>
-        </div>
-
-        <div class="krea-ig-grid-3" style="margin-bottom:12px;">
-            <div id="krea_freq_wrapper" style="display:none;">
-                <label>Frequency (Every X Replies)</label>
-                <input type="number" id="krea_auto_freq" class="text_pole" min="1" max="50" style="width:100%;" />
-            </div>
-            <div>
-                <label>Max Images / Reply</label>
-                <select id="krea_image_count" class="text_pole" style="width:100%;">
-                    <option value="1">1 Image</option>
-                    <option value="2">2 Images</option>
-                    <option value="3">3 Images</option>
-                    <option value="4">4 Images</option>
-                </select>
-            </div>
-            <div>
-                <label>Display Mode</label>
-                <select id="krea_inject_mode" class="text_pole" style="width:100%;">
-                    <option value="inline">Inline (Inside Message Body)</option>
-                    <option value="gallery">Gallery (Attached Media)</option>
-                </select>
-            </div>
-        </div>
-
-        <div style="margin-bottom:10px;">
-            <label>Extra Visual Directives (injected to Krea-2)</label>
-            <input type="text" id="krea_extra" class="text_pole" placeholder="e.g. 35mm film still, warm volumetric lighting, shallow depth of field..." style="width:100%;" />
-        </div>
-
-        <div class="krea-ig-card" style="padding:10px 14px; margin-bottom:8px;">
-            <div class="krea-ig-card-info">
-                <div class="krea-ig-card-title" style="font-size:0.85rem;">Preview Prompt Before Rendering</div>
-                <div class="krea-ig-card-desc">Show a popup to inspect or edit the AI's Krea-2 prompt before sending to ComfyUI.</div>
-            </div>
-            <input type="checkbox" id="krea_preview" />
-        </div>
-    </div>
-
-    <!-- ComfyUI Sampler & Resolution Settings -->
-    <div class="krea-ig-panel">
-        <div class="krea-ig-panel-title"><i class="fa-solid fa-sliders"></i> Sampling & Model Settings</div>
-        <div class="krea-ig-grid-2" style="margin-bottom:12px;">
-            <div>
-                <label>Checkpoint Model (%model%)</label>
-                <select id="krea_model" class="text_pole" style="width:100%;"><option value="">Default from workflow</option></select>
-            </div>
-            <div>
-                <label>Sampler (%sampler%)</label>
-                <select id="krea_sampler" class="text_pole" style="width:100%;"><option value="euler">euler</option></select>
-            </div>
-        </div>
-
-        <div class="krea-ig-grid-4" style="margin-bottom:12px;">
-            <div>
-                <label>Steps (%steps%)</label>
-                <input type="number" id="krea_steps" class="text_pole" min="1" max="150" style="width:100%;" />
-            </div>
-            <div>
-                <label>CFG Scale (%scale%)</label>
-                <input type="number" id="krea_cfg" class="text_pole" min="0.5" max="30" step="0.5" style="width:100%;" />
-            </div>
-            <div>
-                <label>Denoise (%denoise%)</label>
-                <input type="number" id="krea_denoise" class="text_pole" min="0.05" max="1.0" step="0.05" style="width:100%;" />
-            </div>
-            <div>
-                <label>Seed (-1 = Random)</label>
-                <div style="display:flex; gap:4px;">
-                    <input type="number" id="krea_seed" class="text_pole" style="flex:1;" />
-                    <button id="krea_seed_dice" class="menu_button" title="Randomize"><i class="fa-solid fa-dice"></i></button>
-                </div>
-            </div>
-        </div>
-
-        <div class="krea-ig-grid-2" style="margin-bottom:12px;">
-            <div>
-                <label>Resolution Mode</label>
-                <select id="krea_res_preset" class="text_pole" style="width:100%;"></select>
-            </div>
-            <div>
-                <label>Custom Dimensions (W x H)</label>
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="number" id="krea_w" class="text_pole" placeholder="W" style="flex:1; text-align:center;" />
-                    <span>×</span>
-                    <input type="number" id="krea_h" class="text_pole" placeholder="H" style="flex:1; text-align:center;" />
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-bottom:10px;">
-            <label>Positive Prefix (prepended to every prompt)</label>
-            <input type="text" id="krea_prefix" class="text_pole" placeholder="e.g. cinematic film still, masterpiece, high fidelity..." style="width:100%;" />
-        </div>
-
-        <div style="margin-bottom:10px;">
-            <label>Negative Prompt (%negative_prompt%)</label>
-            <input type="text" id="krea_negative" class="text_pole" style="width:100%;" />
-        </div>
-
-        <div class="krea-ig-card" style="padding:10px 14px;">
-            <div class="krea-ig-card-info">
-                <div class="krea-ig-card-title" style="font-size:0.85rem;">Compress to Web-Friendly JPEG</div>
-                <div class="krea-ig-card-desc">Saves disk space and speeds up chat rendering.</div>
-            </div>
-            <input type="checkbox" id="krea_compress" />
-        </div>
-    </div>
-
-    <!-- LoRA Lab with Auto-Memory Triggers -->
-    <div class="krea-ig-panel">
-        <div class="krea-ig-panel-title"><i class="fa-solid fa-flask" style="color:#a855f7;"></i> LoRA Lab (Auto-Trigger Memory)</div>
-        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px;">
-            Trigger words entered here are automatically saved per LoRA file and injected whenever that LoRA is active.
-        </p>
-
-        <div class="krea-ig-grid-2">
-            <!-- LoRA Slot 1 -->
-            <div class="krea-lora-box">
-                <div class="krea-lora-header">Slot 1 (%lora1%)</div>
-                <select id="krea_lora_1" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
-                <input type="text" id="krea_lora_trig_1" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
-                    <input type="range" id="krea_lorawt_1" min="-2" max="2" step="0.1" style="flex:1;" />
-                    <span id="krea_lorawt_lbl_1" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
-                </div>
-            </div>
-
-            <!-- LoRA Slot 2 -->
-            <div class="krea-lora-box">
-                <div class="krea-lora-header">Slot 2 (%lora2%)</div>
-                <select id="krea_lora_2" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
-                <input type="text" id="krea_lora_trig_2" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
-                    <input type="range" id="krea_lorawt_2" min="-2" max="2" step="0.1" style="flex:1;" />
-                    <span id="krea_lorawt_lbl_2" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
-                </div>
-            </div>
-
-            <!-- LoRA Slot 3 -->
-            <div class="krea-lora-box">
-                <div class="krea-lora-header">Slot 3 (%lora3%)</div>
-                <select id="krea_lora_3" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
-                <input type="text" id="krea_lora_trig_3" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
-                    <input type="range" id="krea_lorawt_3" min="-2" max="2" step="0.1" style="flex:1;" />
-                    <span id="krea_lorawt_lbl_3" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
-                </div>
-            </div>
-
-            <!-- LoRA Slot 4 -->
-            <div class="krea-lora-box">
-                <div class="krea-lora-header">Slot 4 (%lora4%)</div>
-                <select id="krea_lora_4" class="text_pole" style="width:100%; margin-bottom:6px;"><option value="">None</option></select>
-                <input type="text" id="krea_lora_trig_4" class="text_pole" placeholder="Trigger words..." style="width:100%; font-size:0.75rem; margin-bottom:6px;" />
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:0.75rem; min-width:30px;">Weight</span>
-                    <input type="range" id="krea_lorawt_4" min="-2" max="2" step="0.1" style="flex:1;" />
-                    <span id="krea_lorawt_lbl_4" style="font-size:0.75rem; min-width:28px; text-align:center;">1.0</span>
-                </div>
-            </div>
+            <div class="krea-clio-grid" id="krea_clio_grid"></div>
         </div>
     </div>
 </div>
